@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { AppNav } from '@/components/AppNav'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -7,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { createWorkout, deleteWorkout, listWorkouts, type Workout } from '@/lib/workouts'
 
 export function Workouts() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
   const [novoNome, setNovoNome] = useState('')
@@ -41,7 +42,12 @@ export function Workouts() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, nome: string) {
+    const confirmado = window.confirm(
+      `Excluir "${nome}"? Isso também apaga as sessões e séries registradas com esse treino.`,
+    )
+    if (!confirmado) return
+
     try {
       await deleteWorkout(id)
       await refresh()
@@ -52,12 +58,9 @@ export function Workouts() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-2xl flex-col gap-6 p-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Meus Treinos</h1>
-        <Button variant="outline" onClick={() => signOut()}>
-          Sair
-        </Button>
-      </header>
+      <AppNav />
+
+      <h1 className="text-2xl font-semibold">Meus Treinos</h1>
 
       <form onSubmit={handleCreate} className="flex gap-2">
         <Input
@@ -88,7 +91,11 @@ export function Workouts() {
                   <Button asChild variant="secondary" size="sm">
                     <Link to={`/treinos/${workout.id}`}>Editar exercícios</Link>
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(workout.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(workout.id, workout.nome)}
+                  >
                     Excluir
                   </Button>
                 </CardContent>

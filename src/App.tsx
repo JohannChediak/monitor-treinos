@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { Login } from '@/pages/Login'
+import { NewSession } from '@/pages/NewSession'
 import { WorkoutEditor } from '@/pages/WorkoutEditor'
 import { Workouts } from '@/pages/Workouts'
 
@@ -23,6 +24,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Workouts />} />
       <Route path="/treinos/:workoutId" element={<WorkoutEditor />} />
+      <Route path="/sessoes/nova" element={<NewSession />} />
     </Routes>
   )
 }
