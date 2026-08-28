@@ -1,23 +1,8 @@
-import { Button } from '@/components/ui/button'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { Login } from '@/pages/Login'
-
-function AuthenticatedHome() {
-  const { user, signOut } = useAuth()
-
-  return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
-      <h1 className="text-3xl font-semibold">Monitor de Treinos</h1>
-      <p className="text-muted-foreground">Sessão iniciada como {user?.email}.</p>
-      <p className="text-sm text-muted-foreground">
-        Em construção: treinos, sessões e gráfico de evolução chegam nos próximos passos.
-      </p>
-      <Button variant="outline" onClick={() => signOut()}>
-        Sair
-      </Button>
-    </main>
-  )
-}
+import { WorkoutEditor } from '@/pages/WorkoutEditor'
+import { Workouts } from '@/pages/Workouts'
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -30,14 +15,25 @@ function AppRoutes() {
     )
   }
 
-  return user ? <AuthenticatedHome /> : <Login />
+  if (!user) {
+    return <Login />
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<Workouts />} />
+      <Route path="/treinos/:workoutId" element={<WorkoutEditor />} />
+    </Routes>
+  )
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
 
