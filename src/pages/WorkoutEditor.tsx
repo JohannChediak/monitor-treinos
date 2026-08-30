@@ -8,9 +8,12 @@ import {
   getWorkout,
   listWorkoutExercises,
   reorderWorkoutExercises,
+  updateSeriesAlvo,
   type Workout,
   type WorkoutExercise,
 } from '@/lib/workouts'
+
+const SERIES_PADRAO = 3
 
 export function WorkoutEditor() {
   const { workoutId } = useParams<{ workoutId: string }>()
@@ -18,6 +21,7 @@ export function WorkoutEditor() {
   const [exercises, setExercises] = useState<WorkoutExercise[]>([])
   const [loading, setLoading] = useState(true)
   const [novoNome, setNovoNome] = useState('')
+  const [novasSeries, setNovasSeries] = useState(String(SERIES_PADRAO))
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -44,13 +48,29 @@ export function WorkoutEditor() {
 
   async function handleAdd(event: FormEvent) {
     event.preventDefault()
-    if (!workoutId || !novoNome.trim()) return
+    const seriesAlvo = Number.parseInt(novasSeries, 10)
+    if (!workoutId || !novoNome.trim() || Number.isNaN(seriesAlvo) || seriesAlvo < 1) return
     try {
-      await addWorkoutExercise(workoutId, novoNome.trim())
+      await addWorkoutExercise(workoutId, novoNome.trim(), seriesAlvo)
       setNovoNome('')
+      setNovasSeries(String(SERIES_PADRAO))
       await refresh()
     } catch {
       setError('Não foi possível adicionar o exercício.')
+    }
+  }
+
+  async function handleSeriesChange(id: string, valor: string) {
+    const seriesAlvo = Number.parseInt(valor, 10)
+    if (Number.isNaN(seriesAlvo) || seriesAlvo < 1) return
+    setExercises((prev) =>
+      prev.map((exercise) => (exercise.id === id ? { ...exercise, series_alvo: seriesAlvo } : exercise)),
+    )
+    try {
+      await updateSeriesAlvo(id, seriesAlvo)
+    } catch {
+      setError('Não foi possível atualizar o número de séries.')
+      await refresh()
     }
   }
 
@@ -111,6 +131,14 @@ export function WorkoutEditor() {
           value={novoNome}
           onChange={(event) => setNovoNome(event.target.value)}
         />
+        <Input
+          type="number"
+          min={1}
+          className="w-20"
+          aria-label="Número de séries"
+          value={novasSeries}
+          onChange={(event) => setNovasSeries(event.target.value)}
+        />
         <Button type="submit" disabled={!novoNome.trim()}>
           Adicionar
         </Button>
@@ -128,7 +156,16 @@ export function WorkoutEditor() {
               className="flex items-center justify-between rounded-lg border p-3"
             >
               <span>{exercise.nome}</span>
-              <div className="flex gap-1">
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={1}
+                  className="w-16"
+                  aria-label={`Número de séries de ${exercise.nome}`}
+                  value={exercise.series_alvo}
+                  onChange={(event) => handleSeriesChange(exercise.id, event.target.value)}
+                />
+                <span className="mr-2 text-sm text-muted-foreground">séries</span>
                 <Button
                   variant="ghost"
                   size="icon-sm"

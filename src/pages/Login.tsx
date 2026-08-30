@@ -10,6 +10,7 @@ export function Login() {
   const [mode, setMode] = useState<'login' | 'cadastro'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmarSenha, setConfirmarSenha] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
@@ -17,6 +18,12 @@ export function Login() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
+
+    if (mode === 'cadastro' && password !== confirmarSenha) {
+      setError('As senhas não são iguais.')
+      return
+    }
+
     setSubmitting(true)
 
     const { error } = mode === 'login' ? await signIn(email, password) : await signUp(email, password)
@@ -73,6 +80,21 @@ export function Login() {
                 />
               </div>
 
+              {mode === 'cadastro' ? (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="confirmar-senha">Confirmar senha</Label>
+                  <Input
+                    id="confirmar-senha"
+                    type="password"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                    value={confirmarSenha}
+                    onChange={(event) => setConfirmarSenha(event.target.value)}
+                  />
+                </div>
+              ) : null}
+
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
               <Button type="submit" disabled={submitting}>
@@ -85,6 +107,7 @@ export function Login() {
                 onClick={() => {
                   setMode(mode === 'login' ? 'cadastro' : 'login')
                   setError(null)
+                  setConfirmarSenha('')
                 }}
               >
                 {mode === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entre'}

@@ -13,11 +13,48 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
-import { createSessionWithSets, type SetInput } from '@/lib/sessions'
+import {
+  createSessionWithSets,
+  getUltimaSessaoExercicio,
+  type SetInput,
+  type UltimaSessaoExercicio,
+} from '@/lib/sessions'
 import { listWorkoutExercises, listWorkouts, type Workout, type WorkoutExercise } from '@/lib/workouts'
+
+type LinhaSerie = {
+  peso: string
+  repeticoes: string
+}
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function formatData(iso: string) {
+  const [ano, mes, dia] = iso.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
+function linhasVaziasParaExercicio(exercise: WorkoutExercise): LinhaSerie[] {
+  return Array.from({ length: exercise.series_alvo }, () => ({ peso: '', repeticoes: '' }))
+}
+
+/** Pré-preenche as linhas de edição com a carga da última vez, completando
+ * com linhas vazias até bater com o número de séries configurado. */
+function linhasIniciaisParaEdicao(
+  exercise: WorkoutExercise,
+  ultima: UltimaSessaoExercicio | null,
+): LinhaSerie[] {
+  if (!ultima) return linhasVaziasParaExercicio(exercise)
+
+  const linhas = ultima.series.map((serie) => ({
+    peso: String(serie.peso),
+    repeticoes: String(serie.repeticoes),
+  }))
+  while (linhas.length < exercise.series_alvo) {
+    linhas.push({ peso: '', repeticoes: '' })
+  }
+  return linhas
 }
 
 export function NewSession() {
@@ -28,9 +65,11 @@ export function NewSession() {
   const [workoutId, setWorkoutId] = useState<string | null>(null)
   const [exercises, setExercises] = useState<WorkoutExercise[]>([])
   const [date, setDate] = useState(todayIsoDate())
-  const [setsByExercise, setSetsByExercise] = useState<Record<string, SetInput[]>>({})
-  const [pesoInput, setPesoInput] = useState<Record<string, string>>({})
-  const [repsInput, setRepsInput] = useState<Record<string, string>>({})
+  const [linhasPorExercicio, setLinhasPorExercicio] = useState<Record<string, LinhaSerie[]>>({})
+  const [ultimasPorExercicio, setUltimasPorExercicio] = useState<
+    Record<string, UltimaSessaoExercicio | null>
+  >({})
+  const [editandoPorExercicio, setEditandoPorExercicio] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,46 +81,86 @@ export function NewSession() {
   useEffect(() => {
     if (!workoutId) {
       setExercises([])
+      setLinhasPorExercicio({})
+      setUltimasPorExercicio({})
+      setEditandoPorExercicio({})
       return
     }
-    void listWorkoutExercises(workoutId).then(setExercises)
-    setSetsByExercise({})
+    void listWorkoutExercises(workoutId).then(async (data) => {
+      setExercises(data)
+      const ultimas = await Promise.all(data.map((exercise) => getUltimaSessaoExercicio(exercise.id)))
+      setUltimasPorExercicio(Object.fromEntries(data.map((exercise, i) => [exercise.id, ultimas[i]])))
+      // Sem registro anterior: não há o que mostrar como texto, então já
+      // abre direto em modo de edição com linhas em branco.
+      setEditandoPorExercicio(Object.fromEntries(data.map((exercise, i) => [exercise.id, !ultimas[i]])))
+      setLinhasPorExercicio(
+        Object.fromEntries(data.map((exercise) => [exercise.id, linhasVaziasParaExercicio(exercise)])),
+      )
+    })
   }, [workoutId])
 
-  function handleAddSet(exerciseId: string) {
-    const peso = Number.parseFloat(pesoInput[exerciseId] ?? '')
-    const repeticoes = Number.parseInt(repsInput[exerciseId] ?? '', 10)
-    if (Number.isNaN(peso) || Number.isNaN(repeticoes)) return
-
-    setSetsByExercise((prev) => {
-      const existing = prev[exerciseId] ?? []
-      const novaSerie: SetInput = {
-        workoutExerciseId: exerciseId,
-        numeroSerie: existing.length + 1,
-        peso,
-        repeticoes,
-      }
-      return { ...prev, [exerciseId]: [...existing, novaSerie] }
-    })
-    setPesoInput((prev) => ({ ...prev, [exerciseId]: '' }))
-    setRepsInput((prev) => ({ ...prev, [exerciseId]: '' }))
+  function handleEditar(exercise: WorkoutExercise) {
+    setLinhasPorExercicio((prev) => ({
+      ...prev,
+      [exercise.id]: linhasIniciaisParaEdicao(exercise, ultimasPorExercicio[exercise.id] ?? null),
+    }))
+    setEditandoPorExercicio((prev) => ({ ...prev, [exercise.id]: true }))
   }
 
-  function handleRemoveSet(exerciseId: string, index: number) {
-    setSetsByExercise((prev) => {
-      const existing = prev[exerciseId] ?? []
-      const reordered = existing
-        .filter((_, i) => i !== index)
-        .map((set, i) => ({ ...set, numeroSerie: i + 1 }))
-      return { ...prev, [exerciseId]: reordered }
+  function handleRowChange(exerciseId: string, index: number, campo: keyof LinhaSerie, valor: string) {
+    setLinhasPorExercicio((prev) => {
+      const linhas = [...(prev[exerciseId] ?? [])]
+      linhas[index] = { ...linhas[index], [campo]: valor }
+      return { ...prev, [exerciseId]: linhas }
     })
+  }
+
+  function handleAddRow(exerciseId: string) {
+    setLinhasPorExercicio((prev) => ({
+      ...prev,
+      [exerciseId]: [...(prev[exerciseId] ?? []), { peso: '', repeticoes: '' }],
+    }))
+  }
+
+  function handleRemoveRow(exerciseId: string, index: number) {
+    setLinhasPorExercicio((prev) => ({
+      ...prev,
+      [exerciseId]: (prev[exerciseId] ?? []).filter((_, i) => i !== index),
+    }))
   }
 
   async function handleSave() {
     if (!user || !workoutId) return
-    const allSets = Object.values(setsByExercise).flat()
+
+    const allSets: SetInput[] = []
+    for (const exercise of exercises) {
+      if (!editandoPorExercicio[exercise.id]) {
+        // Exercício não editado hoje: repete a carga da última vez.
+        const ultima = ultimasPorExercicio[exercise.id]
+        for (const serie of ultima?.series ?? []) {
+          allSets.push({
+            workoutExerciseId: exercise.id,
+            numeroSerie: serie.numeroSerie,
+            peso: serie.peso,
+            repeticoes: serie.repeticoes,
+          })
+        }
+        continue
+      }
+
+      const linhas = linhasPorExercicio[exercise.id] ?? []
+      let numeroSerie = 0
+      for (const linha of linhas) {
+        const peso = Number.parseFloat(linha.peso)
+        const repeticoes = Number.parseInt(linha.repeticoes, 10)
+        if (Number.isNaN(peso) || Number.isNaN(repeticoes)) continue
+        numeroSerie += 1
+        allSets.push({ workoutExerciseId: exercise.id, numeroSerie, peso, repeticoes })
+      }
+    }
+
     if (allSets.length === 0) {
-      setError('Adicione ao menos uma série antes de salvar.')
+      setError('Preencha ao menos uma série antes de salvar.')
       return
     }
 
@@ -141,67 +220,94 @@ export function NewSession() {
 
       <div className="flex flex-col gap-4">
         {exercises.map((exercise) => {
-          const sets = setsByExercise[exercise.id] ?? []
+          const linhas = linhasPorExercicio[exercise.id] ?? []
+          const ultima = ultimasPorExercicio[exercise.id]
+          const editando = editandoPorExercicio[exercise.id] ?? false
+
           return (
             <Card key={exercise.id}>
-              <CardHeader>
+              <CardHeader className="flex-row items-start justify-between">
                 <CardTitle className="text-base">{exercise.nome}</CardTitle>
+                {!editando ? (
+                  <Button variant="outline" size="sm" onClick={() => handleEditar(exercise)}>
+                    Editar
+                  </Button>
+                ) : null}
               </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {sets.length > 0 ? (
-                  <ul className="flex flex-col gap-1 text-sm">
-                    {sets.map((set, index) => (
-                      <li key={index} className="flex items-center justify-between">
-                        <span>
-                          Série {set.numeroSerie}: {set.peso}kg × {set.repeticoes}
+              <CardContent className="flex flex-col gap-2">
+                {!editando ? (
+                  ultima ? (
+                    <div className="text-sm text-muted-foreground">
+                      <p className="mb-1 text-xs">
+                        Última vez ({formatData(ultima.data)}), repete automaticamente se você não
+                        editar:
+                      </p>
+                      <ul>
+                        {ultima.series.map((serie) => (
+                          <li key={serie.numeroSerie}>
+                            Série {serie.numeroSerie}: {serie.peso}kg × {serie.repeticoes}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null
+                ) : (
+                  <>
+                    {linhas.map((linha, index) => (
+                      <div key={index} className="flex items-end gap-2">
+                        <span className="w-16 pb-2 text-sm text-muted-foreground">
+                          Série {index + 1}
                         </span>
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`peso-${exercise.id}-${index}`} className="text-xs">
+                            Peso (kg)
+                          </Label>
+                          <Input
+                            id={`peso-${exercise.id}-${index}`}
+                            type="number"
+                            inputMode="decimal"
+                            className="w-24"
+                            value={linha.peso}
+                            onChange={(event) =>
+                              handleRowChange(exercise.id, index, 'peso', event.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`reps-${exercise.id}-${index}`} className="text-xs">
+                            Reps
+                          </Label>
+                          <Input
+                            id={`reps-${exercise.id}-${index}`}
+                            type="number"
+                            inputMode="numeric"
+                            className="w-20"
+                            value={linha.repeticoes}
+                            onChange={(event) =>
+                              handleRowChange(exercise.id, index, 'repeticoes', event.target.value)
+                            }
+                          />
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveSet(exercise.id, index)}
+                          onClick={() => handleRemoveRow(exercise.id, index)}
                         >
                           Remover
                         </Button>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
-                ) : null}
 
-                <div className="flex items-end gap-2">
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor={`peso-${exercise.id}`} className="text-xs">
-                      Peso (kg)
-                    </Label>
-                    <Input
-                      id={`peso-${exercise.id}`}
-                      type="number"
-                      inputMode="decimal"
-                      className="w-24"
-                      value={pesoInput[exercise.id] ?? ''}
-                      onChange={(event) =>
-                        setPesoInput((prev) => ({ ...prev, [exercise.id]: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor={`reps-${exercise.id}`} className="text-xs">
-                      Reps
-                    </Label>
-                    <Input
-                      id={`reps-${exercise.id}`}
-                      type="number"
-                      inputMode="numeric"
-                      className="w-20"
-                      value={repsInput[exercise.id] ?? ''}
-                      onChange={(event) =>
-                        setRepsInput((prev) => ({ ...prev, [exercise.id]: event.target.value }))
-                      }
-                    />
-                  </div>
-                  <Button size="sm" onClick={() => handleAddSet(exercise.id)}>
-                    + Série
-                  </Button>
-                </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
+                      onClick={() => handleAddRow(exercise.id)}
+                    >
+                      + Série
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           )

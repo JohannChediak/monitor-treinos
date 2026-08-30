@@ -12,6 +12,7 @@ export type WorkoutExercise = {
   workout_id: string
   nome: string
   ordem: number
+  series_alvo: number
 }
 
 export async function listWorkouts(): Promise<Workout[]> {
@@ -58,12 +59,16 @@ export async function listWorkoutExercises(workoutId: string): Promise<WorkoutEx
   return data
 }
 
-export async function addWorkoutExercise(workoutId: string, nome: string): Promise<WorkoutExercise> {
+export async function addWorkoutExercise(
+  workoutId: string,
+  nome: string,
+  seriesAlvo: number,
+): Promise<WorkoutExercise> {
   const exercises = await listWorkoutExercises(workoutId)
   const ordem = exercises.length
   const { data, error } = await supabase
     .from('workout_exercises')
-    .insert({ workout_id: workoutId, nome, ordem })
+    .insert({ workout_id: workoutId, nome, ordem, series_alvo: seriesAlvo })
     .select()
     .single()
   if (error) throw error
@@ -72,6 +77,14 @@ export async function addWorkoutExercise(workoutId: string, nome: string): Promi
 
 export async function renameWorkoutExercise(id: string, nome: string): Promise<void> {
   const { error } = await supabase.from('workout_exercises').update({ nome }).eq('id', id)
+  if (error) throw error
+}
+
+export async function updateSeriesAlvo(id: string, seriesAlvo: number): Promise<void> {
+  const { error } = await supabase
+    .from('workout_exercises')
+    .update({ series_alvo: seriesAlvo })
+    .eq('id', id)
   if (error) throw error
 }
 

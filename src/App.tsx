@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { Evolution } from '@/pages/Evolution'
 import { History } from '@/pages/History'
@@ -29,6 +29,7 @@ function AppRoutes() {
       <Route path="/sessoes/nova" element={<NewSession />} />
       <Route path="/historico" element={<History />} />
       <Route path="/evolucao" element={<Evolution />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

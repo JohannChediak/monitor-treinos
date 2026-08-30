@@ -78,3 +78,58 @@ export async function listSetsForExercise(workoutExerciseId: string): Promise<Se
     .filter((row) => row.session !== null)
     .map((row) => ({ data: row.session!.data, peso: row.peso, repeticoes: row.repeticoes }))
 }
+
+export type UltimaSerie = {
+  numeroSerie: number
+  peso: number
+  repeticoes: number
+}
+
+export type UltimaSessaoExercicio = {
+  data: string
+  series: UltimaSerie[]
+}
+
+/** Séries da sessão mais recente em que esse exercício foi registrado, para
+ * servir de referência ("última vez você fez X") ao registrar uma nova
+ * sessão. Retorna null se o exercício nunca foi registrado.
+ *
+ * Importante: identifica a sessão mais recente por id (não só pela data),
+ * já que pode existir mais de uma sessão na mesma data — usar só a data
+ * juntaria séries de sessões diferentes num "última vez" inflado. */
+export async function getUltimaSessaoExercicio(
+  workoutExerciseId: string,
+): Promise<UltimaSessaoExercicio | null> {
+  const { data, error } = await supabase
+    .from('session_sets')
+    .select('numero_serie, peso, repeticoes, session:sessions(id, data, criado_em)')
+    .eq('workout_exercise_id', workoutExerciseId)
+  if (error) throw error
+
+  const rows = (
+    data as unknown as {
+      numero_serie: number
+      peso: number
+      repeticoes: number
+      session: { id: string; data: string; criado_em: string } | null
+    }[]
+  ).filter((row) => row.session !== null)
+
+  if (rows.length === 0) return null
+
+  const ultimaSessao = rows.reduce((maisRecente, row) => {
+    const sessao = row.session!
+    if (!maisRecente) return sessao
+    if (sessao.data !== maisRecente.data) {
+      return sessao.data > maisRecente.data ? sessao : maisRecente
+    }
+    return sessao.criado_em > maisRecente.criado_em ? sessao : maisRecente
+  }, null as { id: string; data: string; criado_em: string } | null)!
+
+  const series = rows
+    .filter((row) => row.session!.id === ultimaSessao.id)
+    .sort((a, b) => a.numero_serie - b.numero_serie)
+    .map((row) => ({ numeroSerie: row.numero_serie, peso: row.peso, repeticoes: row.repeticoes }))
+
+  return { data: ultimaSessao.data, series }
+}
