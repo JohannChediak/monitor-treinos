@@ -1,3 +1,4 @@
+import type { SetForAggregation } from '@/lib/aggregation'
 import { supabase } from '@/lib/supabase'
 
 export type SetInput = {
@@ -65,4 +66,15 @@ export async function listSessionSets(sessionId: string): Promise<SessionSetDeta
     .order('numero_serie')
   if (error) throw error
   return data as unknown as SessionSetDetail[]
+}
+
+export async function listSetsForExercise(workoutExerciseId: string): Promise<SetForAggregation[]> {
+  const { data, error } = await supabase
+    .from('session_sets')
+    .select('peso, repeticoes, session:sessions(data)')
+    .eq('workout_exercise_id', workoutExerciseId)
+  if (error) throw error
+  return (data as unknown as { peso: number; repeticoes: number; session: { data: string } | null }[])
+    .filter((row) => row.session !== null)
+    .map((row) => ({ data: row.session!.data, peso: row.peso, repeticoes: row.repeticoes }))
 }

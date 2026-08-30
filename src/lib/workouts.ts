@@ -80,6 +80,23 @@ export async function deleteWorkoutExercise(id: string): Promise<void> {
   if (error) throw error
 }
 
+export type ExerciseOption = {
+  id: string
+  nome: string
+  workoutNome: string
+}
+
+export async function listAllWorkoutExercises(): Promise<ExerciseOption[]> {
+  const { data, error } = await supabase
+    .from('workout_exercises')
+    .select('id, nome, workout:workouts(nome)')
+    .order('nome')
+  if (error) throw error
+  return (data as unknown as { id: string; nome: string; workout: { nome: string } | null }[]).map(
+    (row) => ({ id: row.id, nome: row.nome, workoutNome: row.workout?.nome ?? '' }),
+  )
+}
+
 export async function reorderWorkoutExercises(exercises: WorkoutExercise[]): Promise<void> {
   await Promise.all(
     exercises.map((exercise, ordem) =>

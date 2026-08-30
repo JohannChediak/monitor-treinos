@@ -7,6 +7,7 @@ const links = [
   { to: '/', label: 'Meus Treinos' },
   { to: '/sessoes/nova', label: 'Nova Sessão' },
   { to: '/historico', label: 'Histórico' },
+  { to: '/evolucao', label: 'Evolução' },
 ]
 
 export function AppNav() {
