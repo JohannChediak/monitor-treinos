@@ -44,8 +44,8 @@ export function Login() {
     <main className="flex min-h-svh items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Monitor de Treinos</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-bold uppercase">Monitor de Treinos</CardTitle>
+          <CardDescription className="text-sm tracking-wide uppercase">
             {mode === 'login' ? 'Entre com sua conta' : 'Crie sua conta'}
           </CardDescription>
         </CardHeader>

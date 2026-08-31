@@ -37,6 +37,7 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <div className="hazard-strip" />
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

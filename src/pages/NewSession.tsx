@@ -242,10 +242,14 @@ export function NewSession() {
                         Última vez ({formatData(ultima.data)}), repete automaticamente se você não
                         editar:
                       </p>
-                      <ul>
+                      <ul className="flex flex-col gap-1.5">
                         {ultima.series.map((serie) => (
-                          <li key={serie.numeroSerie}>
-                            Série {serie.numeroSerie}: {serie.peso}kg × {serie.repeticoes}
+                          <li key={serie.numeroSerie} className="flex items-center gap-2">
+                            <span className="text-xs">Série {serie.numeroSerie}</span>
+                            <span className="plate">
+                              {serie.peso}
+                              <span className="plate-unit">kg</span> × {serie.repeticoes}
+                            </span>
                           </li>
                         ))}
                       </ul>

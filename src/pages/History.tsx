@@ -79,11 +79,17 @@ export function History() {
                       <div className="flex flex-col gap-3">
                         {Object.entries(setsPorExercicio).map(([nome, sets]) => (
                           <div key={nome}>
-                            <p className="text-sm font-medium">{nome}</p>
-                            <ul className="text-sm text-muted-foreground">
+                            <p className="mb-1.5 text-sm font-medium">{nome}</p>
+                            <ul className="flex flex-col gap-1.5">
                               {sets.map((set) => (
-                                <li key={set.id}>
-                                  Série {set.numero_serie}: {set.peso}kg × {set.repeticoes}
+                                <li key={set.id} className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    Série {set.numero_serie}
+                                  </span>
+                                  <span className="plate">
+                                    {set.peso}
+                                    <span className="plate-unit">kg</span> × {set.repeticoes}
+                                  </span>
                                 </li>
                               ))}
                             </ul>

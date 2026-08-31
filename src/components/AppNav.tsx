@@ -14,16 +14,17 @@ export function AppNav() {
   const { signOut } = useAuth()
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-      <nav className="flex flex-wrap gap-x-4 gap-y-1">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+      <nav className="flex flex-wrap gap-x-5 gap-y-2">
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
+            end={link.to === '/'}
             className={({ isActive }) =>
               cn(
-                'text-sm font-medium text-muted-foreground hover:text-foreground',
-                isActive && 'text-foreground underline underline-offset-4',
+                'border-b-2 border-transparent pb-1 text-xs font-medium tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground',
+                isActive && 'border-primary text-foreground',
               )
             }
           >

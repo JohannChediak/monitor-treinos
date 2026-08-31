@@ -21,8 +21,8 @@ export default defineConfig({
         name: 'Monitor de Treinos',
         short_name: 'Treinos',
         description: 'Registre seus treinos e acompanhe sua evolução.',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#16120d',
+        background_color: '#16120d',
         display: 'standalone',
         start_url: '/',
         icons: [
