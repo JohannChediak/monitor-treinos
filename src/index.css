@@ -125,21 +125,6 @@ body {
   }
 }
 
-/* Faixa de sinalização: listras diagonais laranja/preto, como fita de
-   aviso de equipamento de academia. Elemento de assinatura, usado uma
-   vez só, no topo do app. */
-.hazard-strip {
-  height: 6px;
-  width: 100%;
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--ember) 0,
-    var(--ember) 10px,
-    var(--ink) 10px,
-    var(--ink) 20px
-  );
-}
-
 /* "Chapinha" de carga: peso × repetições exibidos como se fossem
    gravados numa anilha — número em mono, chip escuro, borda inferior
    laranja. Elemento de assinatura usado em toda referência a carga. */
