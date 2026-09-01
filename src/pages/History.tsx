@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { AppNav } from '@/components/AppNav'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { listSessionSets, listSessions, type SessionSetDetail, type SessionSummary } from '@/lib/sessions'
+import {
+  deleteSession,
+  listSessionSets,
+  listSessions,
+  type SessionSetDetail,
+  type SessionSummary,
+} from '@/lib/sessions'
 
 function formatData(iso: string) {
   const [ano, mes, dia] = iso.split('-')
@@ -40,6 +46,19 @@ export function History() {
     }
   }
 
+  async function handleDelete(sessionId: string, dataFormatada: string) {
+    const confirmado = window.confirm(`Excluir a sessão de ${dataFormatada}? Isso apaga todas as séries dela.`)
+    if (!confirmado) return
+
+    try {
+      await deleteSession(sessionId)
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId))
+      if (expandedId === sessionId) setExpandedId(null)
+    } catch {
+      setError('Não foi possível excluir essa sessão.')
+    }
+  }
+
   const setsPorExercicio = setsByExpanded.reduce<Record<string, SessionSetDetail[]>>((acc, set) => {
     const nome = set.workout_exercise?.nome ?? 'Exercício'
     acc[nome] = [...(acc[nome] ?? []), set]
@@ -67,9 +86,18 @@ export function History() {
                   <CardTitle className="text-base">
                     {formatData(session.data)} — {session.workout?.nome ?? 'Treino removido'}
                   </CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => toggleExpand(session.id)}>
-                    {expandedId === session.id ? 'Fechar' : 'Ver séries'}
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => toggleExpand(session.id)}>
+                      {expandedId === session.id ? 'Fechar' : 'Ver séries'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(session.id, formatData(session.data))}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
                 </CardHeader>
                 {expandedId === session.id ? (
                   <CardContent>

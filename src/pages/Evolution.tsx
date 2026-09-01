@@ -12,7 +12,9 @@ import { AppNav } from '@/components/AppNav'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -57,6 +59,19 @@ export function Evolution() {
     [resumo],
   )
 
+  const gruposPorTreino = useMemo(() => {
+    const grupos = new Map<string, { workoutNome: string; exercises: ExerciseOption[] }>()
+    for (const exercise of exercises) {
+      const grupo = grupos.get(exercise.workoutId) ?? {
+        workoutNome: exercise.workoutNome,
+        exercises: [],
+      }
+      grupo.exercises.push(exercise)
+      grupos.set(exercise.workoutId, grupo)
+    }
+    return Array.from(grupos.values())
+  }, [exercises])
+
   return (
     <main className="mx-auto flex min-h-svh max-w-2xl flex-col gap-6 p-6">
       <AppNav />
@@ -70,10 +85,15 @@ export function Evolution() {
               <SelectValue placeholder="Escolha um exercício" />
             </SelectTrigger>
             <SelectContent>
-              {exercises.map((exercise) => (
-                <SelectItem key={exercise.id} value={exercise.id}>
-                  {exercise.nome} ({exercise.workoutNome})
-                </SelectItem>
+              {gruposPorTreino.map((grupo) => (
+                <SelectGroup key={grupo.workoutNome}>
+                  <SelectLabel>{grupo.workoutNome}</SelectLabel>
+                  {grupo.exercises.map((exercise) => (
+                    <SelectItem key={exercise.id} value={exercise.id}>
+                      {exercise.nome}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>

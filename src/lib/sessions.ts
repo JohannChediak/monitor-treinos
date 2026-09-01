@@ -50,6 +50,11 @@ export async function listSessions(): Promise<SessionSummary[]> {
   return data as unknown as SessionSummary[]
 }
 
+export async function deleteSession(id: string): Promise<void> {
+  const { error } = await supabase.from('sessions').delete().eq('id', id)
+  if (error) throw error
+}
+
 export type SessionSetDetail = {
   id: string
   numero_serie: number
